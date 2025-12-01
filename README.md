@@ -1,6 +1,7 @@
 # Authors
 
 **黄俊植（Junzhi Huang）** – Shanghai Jiao Tong University — （Email: biscu0@sjtu.edu.cn）
+
 **王士壮（Shizhuang Wang）** – Shanghai Jiao Tong University — （Email: sz.wang@sjtu.edu.cn）
 
 # MobileDataCaptureKit
