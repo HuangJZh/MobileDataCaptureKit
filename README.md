@@ -1,3 +1,8 @@
+# Authors
+
+**黄俊植（Junzhi Huang）** – Shanghai Jiao Tong University — （Email: biscu0@sjtu.edu.cn）
+**王士壮（Shizhuang Wang）** – Shanghai Jiao Tong University — （Email: sz.wang@sjtu.edu.cn）
+
 # MobileDataCaptureKit
 
 A lightweight Android application designed for researchers to capture **synchronized camera and sensor data** using a smartphone.  
@@ -7,10 +12,10 @@ This tool integrates the **Camera2 API** with multiple onboard sensors, making i
 
 ##  Features
 
-- 📸 **Camera2 API Support**  
+-  **Camera2 API Support**  
   Capture image frames or preview data using the Android Camera2 system.
 
-- 📱 **Multi-Sensor Data Collection**  
+-  **Multi-Sensor Data Collection**  
   Supports common smartphone sensors:
     - Accelerometer
     - Gyroscope
