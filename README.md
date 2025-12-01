@@ -40,8 +40,11 @@ This tool integrates the **Camera2 API** with multiple onboard sensors, making i
 
 /app
 ├── java/.../MainActivity.java # Main UI and camera preview
+
 ├── java/.../CameraCoreManager.java # Core Camera2 logic
+
 ├── AndroidManifest.xml # Permissions and sensor declarations
+
 ├── res/... # Layouts & resources
 
 
