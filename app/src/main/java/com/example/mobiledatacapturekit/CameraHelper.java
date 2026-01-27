@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 
 import android.hardware.camera2.params.StreamConfigurationMap;
 import java.util.Locale;
+import java.util.Arrays;
 
 public class CameraHelper {
     private static final String TAG = "CameraHelper";
@@ -144,7 +145,7 @@ public class CameraHelper {
     };
 
     private void startPreview() {
-        if (mCameraDevice == null || !mTextureView.isAvailable()) return;
+        if (mCameraDevice == null || !mTextureView.isAvailable() || mPreviewSize == null) return;
 
         try {
             closeSession();
@@ -155,7 +156,10 @@ public class CameraHelper {
             CaptureRequest.Builder builder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             builder.addTarget(surface);
 
-            mCameraDevice.createCaptureSession(Collections.singletonList(surface), new CameraCaptureSession.StateCallback() {
+            // 【关键修复】：这里必须把 mImageReader.getSurface() 也加进去，否则拍照会崩
+            List<Surface> surfaces = Arrays.asList(surface, mImageReader.getSurface());
+
+            mCameraDevice.createCaptureSession(surfaces, new CameraCaptureSession.StateCallback() {
                 @Override
                 public void onConfigured(CameraCaptureSession session) {
                     if (mCameraDevice == null) return;

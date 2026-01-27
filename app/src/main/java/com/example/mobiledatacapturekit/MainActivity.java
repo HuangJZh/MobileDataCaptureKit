@@ -1,4 +1,4 @@
-package com.example.mobiledatacapturekit;
+package com.example.mobiledatacapturekit; // 确保包名正确
 
 import android.Manifest;
 import android.app.Activity;
@@ -17,6 +17,7 @@ import java.io.File;
 
 public class MainActivity extends Activity {
     private static final int REQUEST_PERMISSIONS = 1;
+    // Android 10+ 不需要存储权限，只需相机和录音
     private static final String[] PERMISSIONS = {
             Manifest.permission.CAMERA,
             Manifest.permission.RECORD_AUDIO
@@ -28,15 +29,19 @@ public class MainActivity extends Activity {
 
     // UI Elements
     private TextView tvAcc, tvGyro, tvPressure, tvMag;
-    private Button btnRecord;
-    private boolean isRecording = false;
+    private Button btnSensorLog; // 控制传感器
+    private Button btnVideoRecord; // 控制录像
+
+    // 独立的状态标志
+    private boolean isSensorLogging = false;
+    private boolean isVideoRecording = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera);
 
-        // Bind Views
+        // 绑定视图
         mTextureView = findViewById(R.id.texture_view);
         tvAcc = findViewById(R.id.accelerometerTextView);
         tvGyro = findViewById(R.id.gyroscopeTextView);
@@ -44,13 +49,20 @@ public class MainActivity extends Activity {
         tvMag = findViewById(R.id.magneticFieldTextView);
 
         ImageButton btnCapture = findViewById(R.id.camera_take_picture);
-        btnRecord = findViewById(R.id.videostartstop);
-        Button btnSensorRecord = findViewById(R.id.startStopButton); // 重用布局中的按钮
 
-        // Init Helpers
+        // 【关键修改】重新定义按钮功能
+        // 对应 XML 中的 "videostartstop" (原 Startcapture)
+        btnSensorLog = findViewById(R.id.videostartstop);
+
+        // 对应 XML 中的 "startStopButton" (原 Startrecord)
+        btnVideoRecord = findViewById(R.id.startStopButton);
+
+        // 初始化按钮文本
+        updateButtonUI();
+
+        // 初始化 Helpers
         mCameraHelper = new CameraHelper(this, mTextureView);
         mSensorHelper = new SensorHelper(this, (sensorName, dataText) -> {
-            // 安全地在 UI 线程更新
             runOnUiThread(() -> {
                 switch (sensorName) {
                     case "Accelerometer": tvAcc.setText("ACC:\n" + dataText); break;
@@ -61,36 +73,56 @@ public class MainActivity extends Activity {
             });
         });
 
-        // Click Listeners
+        // --- 1. 拍照按钮 ---
         btnCapture.setOnClickListener(v -> mCameraHelper.takePicture());
 
-        btnRecord.setOnClickListener(v -> toggleVideoRecording());
+        // --- 2. 传感器数据按钮 (Startcapture -> Data Log) ---
+        btnSensorLog.setOnClickListener(v -> {
+            if (isSensorLogging) {
+                // 停止记录数据
+                mSensorHelper.stopRecording();
+                isSensorLogging = false;
+                Toast.makeText(this, "Sensor Log Stopped", Toast.LENGTH_SHORT).show();
+            } else {
+                // 开始记录数据
+                File sensorFile = new File(FileUtils.getDataDir(this, "SensorData"), "SENS_" + FileUtils.getTimestamp() + ".csv");
+                mSensorHelper.startRecording(sensorFile);
+                isSensorLogging = true;
+                Toast.makeText(this, "Sensor Log Started", Toast.LENGTH_SHORT).show();
+            }
+            updateButtonUI();
+        });
 
-        btnSensorRecord.setOnClickListener(v -> {
-            // 这里为了演示，可以把 Sensor 记录和 Video 记录解耦，或者合二为一
-            // 当前逻辑：点击此按钮仅记录传感器数据
-            Toast.makeText(this, "Sensor logging logic separate from video in this refactor", Toast.LENGTH_SHORT).show();
+        // --- 3. 视频录制按钮 (Startrecord -> Video Rec) ---
+        btnVideoRecord.setOnClickListener(v -> {
+            if (isVideoRecording) {
+                // 停止录像
+                mCameraHelper.stopRecordingVideo();
+                isVideoRecording = false;
+            } else {
+                // 开始录像
+                mCameraHelper.startRecordingVideo();
+                isVideoRecording = true;
+            }
+            updateButtonUI();
         });
 
         checkPermissions();
     }
 
-    private void toggleVideoRecording() {
-        if (isRecording) {
-            // Stop
-            mCameraHelper.stopRecordingVideo();
-            mSensorHelper.stopRecording();
-            btnRecord.setText("Start Capture");
-            isRecording = false;
+    private void updateButtonUI() {
+        // 更新传感器按钮文本
+        if (isSensorLogging) {
+            btnSensorLog.setText("Stop Data");
         } else {
-            // Start
-            mCameraHelper.startRecordingVideo();
-            // 同时开始记录 Sensor 数据
-            File sensorFile = new File(FileUtils.getDataDir(this, "SensorData"), "SENS_" + FileUtils.getTimestamp() + ".csv");
-            mSensorHelper.startRecording(sensorFile);
+            btnSensorLog.setText("Start Data");
+        }
 
-            btnRecord.setText("Stop Capture");
-            isRecording = true;
+        // 更新录像按钮文本
+        if (isVideoRecording) {
+            btnVideoRecord.setText("Stop Video");
+        } else {
+            btnVideoRecord.setText("Start Video");
         }
     }
 
@@ -107,6 +139,15 @@ public class MainActivity extends Activity {
     protected void onPause() {
         mCameraHelper.onPause();
         mSensorHelper.stopSensors();
+        // 如果退出应用时还在录制，强制停止以保存文件
+        if (isSensorLogging) {
+            mSensorHelper.stopRecording();
+            isSensorLogging = false;
+        }
+        if (isVideoRecording) {
+            mCameraHelper.stopRecordingVideo();
+            isVideoRecording = false;
+        }
         super.onPause();
     }
 
