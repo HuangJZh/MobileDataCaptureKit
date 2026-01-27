@@ -36,7 +36,8 @@ public class SensorHelper implements SensorEventListener {
     private void registerSensor(int type) {
         Sensor sensor = mSensorManager.getDefaultSensor(type);
         if (sensor != null) {
-            mSensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_UI);
+            //传感器频率修改
+            mSensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_FASTEST);
         }
     }
 
