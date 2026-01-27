@@ -36,12 +36,15 @@ public class MainActivity extends Activity {
     private boolean isSensorLogging = false;
     private boolean isVideoRecording = false;
 
+    private long lastUiUpdateTime = 0;
+    private static final long UI_UPDATE_INTERVAL_MS = 100; // 100ms更新一次(10Hz)，足够人眼看了
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera);
 
-        // 绑定视图
+        // --- 1. 绑定视图 ---
         mTextureView = findViewById(R.id.texture_view);
         tvAcc = findViewById(R.id.accelerometerTextView);
         tvGyro = findViewById(R.id.gyroscopeTextView);
@@ -50,41 +53,58 @@ public class MainActivity extends Activity {
 
         ImageButton btnCapture = findViewById(R.id.camera_take_picture);
 
-        // 【关键修改】重新定义按钮功能
-        // 对应 XML 中的 "videostartstop" (原 Startcapture)
+        // 对应 XML 中的 "videostartstop" (用于控制传感器数据 Log)
         btnSensorLog = findViewById(R.id.videostartstop);
 
-        // 对应 XML 中的 "startStopButton" (原 Startrecord)
+        // 对应 XML 中的 "startStopButton" (用于控制视频录制 Record)
         btnVideoRecord = findViewById(R.id.startStopButton);
 
-        // 初始化按钮文本
+        // 初始化按钮文字状态
         updateButtonUI();
 
-        // 初始化 Helpers
+        // --- 2. 初始化 Helpers ---
         mCameraHelper = new CameraHelper(this, mTextureView);
+
+        // 【核心优化】初始化 SensorHelper 并添加节流逻辑
+        // 只有当时间间隔超过 100ms 时才刷新 TextView，解决启动卡顿和 UI 掉帧问题
         mSensorHelper = new SensorHelper(this, (sensorName, dataText) -> {
-            runOnUiThread(() -> {
-                switch (sensorName) {
-                    case "Accelerometer": tvAcc.setText("ACC:\n" + dataText); break;
-                    case "Gyroscope": tvGyro.setText("GYRO:\n" + dataText); break;
-                    case "Pressure": tvPressure.setText("PRESS:\n" + dataText); break;
-                    case "Magnetic": tvMag.setText("MAG:\n" + dataText); break;
-                }
-            });
+            long currentTime = System.currentTimeMillis();
+            if (currentTime - lastUiUpdateTime > UI_UPDATE_INTERVAL_MS) {
+                lastUiUpdateTime = currentTime;
+
+                runOnUiThread(() -> {
+                    switch (sensorName) {
+                        case "Accelerometer":
+                            tvAcc.setText("ACC: " + dataText);
+                            break;
+                        case "Gyroscope":
+                            tvGyro.setText("GYRO: " + dataText);
+                            break;
+                        case "Pressure":
+                            tvPressure.setText("PRESS: " + dataText);
+                            break;
+                        case "Magnetic":
+                            tvMag.setText("MAG: " + dataText);
+                            break;
+                    }
+                });
+            }
         });
 
-        // --- 1. 拍照按钮 ---
+        // --- 3. 设置点击监听器 ---
+
+        // A. 拍照按钮
         btnCapture.setOnClickListener(v -> mCameraHelper.takePicture());
 
-        // --- 2. 传感器数据按钮 (Startcapture -> Data Log) ---
+        // B. 传感器数据记录按钮 (LOG DATA)
         btnSensorLog.setOnClickListener(v -> {
             if (isSensorLogging) {
-                // 停止记录数据
+                // 停止记录
                 mSensorHelper.stopRecording();
                 isSensorLogging = false;
-                Toast.makeText(this, "Sensor Log Stopped", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Sensor Log Saved", Toast.LENGTH_SHORT).show();
             } else {
-                // 开始记录数据
+                // 开始记录
                 File sensorFile = new File(FileUtils.getDataDir(this, "SensorData"), "SENS_" + FileUtils.getTimestamp() + ".csv");
                 mSensorHelper.startRecording(sensorFile);
                 isSensorLogging = true;
@@ -93,7 +113,7 @@ public class MainActivity extends Activity {
             updateButtonUI();
         });
 
-        // --- 3. 视频录制按钮 (Startrecord -> Video Rec) ---
+        // C. 视频录制按钮 (RECORD VIDEO)
         btnVideoRecord.setOnClickListener(v -> {
             if (isVideoRecording) {
                 // 停止录像
@@ -107,6 +127,7 @@ public class MainActivity extends Activity {
             updateButtonUI();
         });
 
+        // --- 4. 检查权限 ---
         checkPermissions();
     }
 

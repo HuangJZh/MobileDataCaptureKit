@@ -7,41 +7,43 @@
     android:layout_height="match_parent"
     android:background="#000000">
 
-    <!-- 1. 相机预览层 -->
+    <!-- 1. 相机预览 (最底层) -->
     <TextureView
         android:id="@+id/texture_view"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- 2. 顶部渐变遮罩 (提升文字可读性，无性能损耗) -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:background="@drawable/bg_gradient_scrim"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- 2. 传感器 HUD -->
+    <!-- 3. 传感器数据区 (移除背景框，直接显示文字，更通透) -->
     <LinearLayout
         android:id="@+id/sensor_hud_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginTop="40dp"
-        android:background="#80000000"
         android:orientation="vertical"
-        android:padding="12dp"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        android:elevation="4dp">
+        app:layout_constraintTop_toTopOf="parent">
 
         <TextView
             android:id="@+id/accelerometerTextView"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:fontFamily="monospace"
-            android:text="ACC: Waiting..."
+            android:shadowColor="#000000"
+            android:shadowDx="1"
+            android:shadowDy="1"
+            android:shadowRadius="2"
+            android:text="ACC: -"
             android:textColor="#FFFFFF"
-            android:textSize="12sp"
-            tools:text="ACC: X:0.12 Y:9.81 Z:0.05" />
+            android:textSize="13sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/gyroscopeTextView"
@@ -49,10 +51,14 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:fontFamily="monospace"
-            android:text="GYRO: Waiting..."
+            android:shadowColor="#000000"
+            android:shadowDx="1"
+            android:shadowDy="1"
+            android:shadowRadius="2"
+            android:text="GYRO: -"
             android:textColor="#FFFFFF"
-            android:textSize="12sp"
-            tools:text="GYRO: X:0.01 Y:0.02 Z:0.00" />
+            android:textSize="13sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/pressureTextView"
@@ -60,10 +66,14 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:fontFamily="monospace"
-            android:text="PRESS: Waiting..."
+            android:shadowColor="#000000"
+            android:shadowDx="1"
+            android:shadowDy="1"
+            android:shadowRadius="2"
+            android:text="PRESS: -"
             android:textColor="#FFFFFF"
-            android:textSize="12sp"
-            tools:text="PRESS: 1013.25 hPa" />
+            android:textSize="13sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/magneticFieldTextView"
@@ -71,64 +81,66 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:fontFamily="monospace"
-            android:text="MAG: Waiting..."
+            android:shadowColor="#000000"
+            android:shadowDx="1"
+            android:shadowDy="1"
+            android:shadowRadius="2"
+            android:text="MAG: -"
             android:textColor="#FFFFFF"
-            android:textSize="12sp"
-            tools:text="MAG: X:14 Y:20 Z:45" />
+            android:textSize="13sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- 3. 底部控制栏 -->
+    <!-- 4. 底部控制栏 -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/bottom_control_panel"
         android:layout_width="match_parent"
         android:layout_height="120dp"
-        android:background="#66000000"
         android:paddingBottom="20dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
+        app:layout_constraintBottom_toBottomOf="parent">
 
-        <!-- 拍照按钮：使用 bg_circle_white -->
+        <!-- 拍照按钮 -->
         <ImageButton
             android:id="@+id/camera_take_picture"
-            android:layout_width="70dp"
-            android:layout_height="70dp"
+            android:layout_width="72dp"
+            android:layout_height="72dp"
             android:background="@drawable/bg_circle_white"
             android:backgroundTint="#FFFFFF"
+            android:contentDescription="Take Picture"
             android:scaleType="center"
             android:src="@android:drawable/ic_menu_camera"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            android:contentDescription="Take Picture"
-            android:elevation="6dp"/>
+            app:layout_constraintTop_toTopOf="parent" />
 
-        <!-- Data 按钮：使用 bg_round_pill -->
+        <!-- Data 按钮 -->
         <Button
             android:id="@+id/videostartstop"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Start Data"
-            android:textSize="12sp"
+            android:layout_width="100dp"
+            android:layout_height="40dp"
             android:background="@drawable/bg_round_pill"
-            android:backgroundTint="#2196F3"
+            android:backgroundTint="#448AFF"
+            android:text="LOG DATA"
             android:textColor="#FFFFFF"
+            android:textSize="11sp"
+            android:textStyle="bold"
             app:layout_constraintBottom_toBottomOf="@+id/camera_take_picture"
             app:layout_constraintEnd_toStartOf="@+id/camera_take_picture"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="@+id/camera_take_picture" />
 
-        <!-- Video 按钮：使用 bg_round_pill -->
+        <!-- Video 按钮 -->
         <Button
             android:id="@+id/startStopButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Start Video"
-            android:textSize="12sp"
+            android:layout_width="100dp"
+            android:layout_height="40dp"
             android:background="@drawable/bg_round_pill"
-            android:backgroundTint="#F44336"
+            android:backgroundTint="#FF5252"
+            android:text="RECORD"
             android:textColor="#FFFFFF"
+            android:textSize="11sp"
+            android:textStyle="bold"
             app:layout_constraintBottom_toBottomOf="@+id/camera_take_picture"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toEndOf="@+id/camera_take_picture"
