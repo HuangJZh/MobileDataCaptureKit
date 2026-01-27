@@ -61,7 +61,13 @@ public class CameraHelper {
     public void onResume() {
         startBackgroundThread();
         if (mTextureView.isAvailable()) {
-            openCamera(mTextureView.getWidth(), mTextureView.getHeight());
+            // 先在主线程获取尺寸
+            int width = mTextureView.getWidth();
+            int height = mTextureView.getHeight();
+            // 【关键修改】将繁重的打开相机操作抛给后台线程，不阻塞 UI
+            if (mBackgroundHandler != null) {
+                mBackgroundHandler.post(() -> openCamera(width, height));
+            }
         } else {
             mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
         }
@@ -75,7 +81,10 @@ public class CameraHelper {
     private final TextureView.SurfaceTextureListener mSurfaceTextureListener = new TextureView.SurfaceTextureListener() {
         @Override
         public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
-            openCamera(width, height);
+            // 【关键修改】同样抛给后台线程
+            if (mBackgroundHandler != null) {
+                mBackgroundHandler.post(() -> openCamera(width, height));
+            }
         }
         @Override public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {}
         @Override public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) { return true; }
