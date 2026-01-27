@@ -6,6 +6,23 @@ This tool integrates the **Android Camera2 API** with multiple onboard IMU senso
 
 ---
 
+## 📱 User Interface
+
+<img src="assets/app_interface.png" alt="app_interface" style="zoom: 25%;" />
+
+The application interface is designed for simplicity and real-time monitoring:
+
+1.  **Real-Time Sensor Overlay (Top-Left):**
+    *   Displays instantaneous readings for **ACC** (Accelerometer), **GYRO** (Gyroscope), **PRESS** (Barometer), and **MAG** (Magnetometer) to ensure sensors are active before recording.
+2.  **START DATA (Blue Button):**
+    *   Starts logging raw sensor data to a CSV file *without* recording video. Useful for IMU calibration or non-visual data collection.
+3.  **Shutter Button (Center Camera Icon):**
+    *   Captures a high-resolution still image and saves it to the system Gallery.
+4.  **START VIDEO (Red Button):**
+    *   Begins video recording. This **simultaneously** triggers the logging of frame-level metadata and high-frequency sensor data, ensuring strict synchronization.
+
+---
+
 ## 👥 Authors
 
 **黄俊植（Junzhi Huang）** – Shanghai Jiao Tong University — （Email: biscu0@sjtu.edu.cn）
