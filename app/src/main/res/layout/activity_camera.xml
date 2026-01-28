@@ -19,6 +19,18 @@
         android:layout_height="200dp"
         android:background="@drawable/bg_gradient_scrim"
         app:layout_constraintTop_toTopOf="parent" />
+    <!-- 在 TextureView 之后，LinearLayout 之前添加这个按钮 -->
+    <ImageButton
+        android:id="@+id/btn_settings"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginTop="32dp"
+        android:layout_marginEnd="16dp"
+        android:background="@android:color/transparent"
+        android:src="@android:drawable/ic_menu_preferences"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="#FFFFFF" />
 
     <!-- 3. 传感器数据 -->
     <LinearLayout

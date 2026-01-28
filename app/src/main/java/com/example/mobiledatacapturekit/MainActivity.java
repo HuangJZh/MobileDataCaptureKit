@@ -14,6 +14,7 @@ import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 
 import java.io.File;
+import android.content.Intent;
 
 public class MainActivity extends Activity {
     private static final int REQUEST_PERMISSIONS = 1;
@@ -69,6 +70,12 @@ public class MainActivity extends Activity {
                     }
                 });
             }
+        });
+
+        ImageButton btnSettings = findViewById(R.id.btn_settings);
+        btnSettings.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
+            startActivity(intent);
         });
 
         btnCapture.setOnClickListener(v -> mCameraHelper.takePicture());

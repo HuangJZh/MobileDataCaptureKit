@@ -11,6 +11,7 @@ import android.media.MediaRecorder;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
+import android.util.Range; // 导入 Range
 import android.util.Size;
 import android.view.Surface;
 import android.view.TextureView;
@@ -108,7 +109,6 @@ public class CameraHelper {
 
             StreamConfigurationMap map = mCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
 
-            // 使用 AppConfig 的分辨率设置
             mVideoSize = chooseOptimalSize(map.getOutputSizes(MediaRecorder.class),
                     AppConfig.VIDEO_WIDTH, AppConfig.VIDEO_HEIGHT);
             mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height);
@@ -146,36 +146,47 @@ public class CameraHelper {
         }
     };
 
-    /**
-     * 【关键】统一应用 SLAM/Config 参数
-     */
     private void applyConfigSettings(CaptureRequest.Builder builder) {
-        // 1. 对焦 (Focus)
-        if (AppConfig.ENABLE_AUTO_FOCUS) {
+        boolean autoFocus = AppConfig.isAutoFocus(mContext);
+        boolean autoExposure = AppConfig.isAutoExposure(mContext);
+        int targetFps = AppConfig.getVideoFps(mContext);
+
+        // 1. 对焦
+        if (autoFocus) {
             builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
         } else {
             builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
             builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, AppConfig.FIXED_FOCUS_DISTANCE);
         }
 
-        // 2. 曝光 (Exposure)
-        if (AppConfig.ENABLE_AUTO_EXPOSURE) {
+        // 2. 曝光与帧率
+        long frameDuration = 1_000_000_000L / targetFps; // 目标帧时长
+
+        // 【关键修改】即使在手动曝光模式下，设置 AE Target Range 也有助于底层调度器分配带宽
+        Range<Integer> fpsRange = new Range<>(targetFps, targetFps);
+        builder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, fpsRange);
+
+        if (autoExposure) {
             builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON);
         } else {
             builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
-            builder.set(CaptureRequest.SENSOR_SENSITIVITY, AppConfig.FIXED_ISO);
-            builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, AppConfig.FIXED_EXPOSURE_TIME_NS);
-            long frameDuration = 1_000_000_000L / AppConfig.VIDEO_FPS;
+            builder.set(CaptureRequest.SENSOR_SENSITIVITY, AppConfig.getIso(mContext));
+
+            long exposureTime = AppConfig.getExposureTime(mContext);
+
+            // 【保护逻辑】如果曝光时间 > 帧时长，强制降低 FPS 预期，但还是写入用户设置的 exposure
+            // 实际上如果 exposure 设置太大，FPS 必定达不到 target
+            if (exposureTime >= frameDuration) {
+                Log.w(TAG, "Warning: Exposure time (" + exposureTime + "ns) is too large for " + targetFps + "FPS");
+            }
+
+            builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, exposureTime);
             builder.set(CaptureRequest.SENSOR_FRAME_DURATION, frameDuration);
         }
 
-        // 3. 【SLAM必须】关闭光学防抖 (OIS) - 防止内参(Intrinsics)变化
+        // 3. SLAM 核心配置
         builder.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_OFF);
-
-        // 4. 【SLAM必须】关闭电子防抖 (EIS) - 防止图像裁剪和扭曲
         builder.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE, CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_OFF);
-
-        // 5. 【SLAM建议】关闭/降低 ISP 后处理 (保留纹理细节)
         builder.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_FAST);
         builder.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_FAST);
         builder.set(CaptureRequest.TONEMAP_MODE, CaptureRequest.TONEMAP_MODE_FAST);
@@ -193,7 +204,7 @@ public class CameraHelper {
             builder.addTarget(surface);
             builder.addTarget(mImageReader.getSurface());
 
-            applyConfigSettings(builder); // 应用配置
+            applyConfigSettings(builder);
 
             List<Surface> surfaces = Arrays.asList(surface, mImageReader.getSurface());
             mCameraDevice.createCaptureSession(surfaces, new CameraCaptureSession.StateCallback() {
@@ -219,7 +230,7 @@ public class CameraHelper {
         try {
             CaptureRequest.Builder captureBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             captureBuilder.addTarget(mImageReader.getSurface());
-            applyConfigSettings(captureBuilder); // 保持曝光一致
+            applyConfigSettings(captureBuilder);
             captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, 90);
 
             mCaptureSession.stopRepeating();
@@ -251,12 +262,12 @@ public class CameraHelper {
             builder.addTarget(previewSurface);
             builder.addTarget(recorderSurface);
 
-            applyConfigSettings(builder); // 应用配置
+            applyConfigSettings(builder);
 
             File dir = FileUtils.getDataDir(mContext, "Metadata");
             mMetadataFile = new File(dir, "META_" + FileUtils.getTimestamp() + ".csv");
-            // 修正 Header，明确时间戳单位
-            FileUtils.appendTextToFile(mMetadataFile, "Frame,Timestamp(ns),Exposure(ns),ISO,FocalLen\n");
+            // 【修改】添加 FrameDuration 记录，方便调试
+            FileUtils.appendTextToFile(mMetadataFile, "Frame,Timestamp(ns),Exposure(ns),ISO,FocalLen,FrameDur(ns)\n");
             mFrameCount = 0;
 
             List<Surface> surfaces = new ArrayList<>();
@@ -324,9 +335,8 @@ public class CameraHelper {
         mCurrentVideoFile = new File(dir, "VID_" + FileUtils.getTimestamp() + ".mp4");
         mMediaRecorder.setOutputFile(mCurrentVideoFile.getAbsolutePath());
 
-        // 使用 AppConfig 参数
         mMediaRecorder.setVideoEncodingBitRate(AppConfig.VIDEO_BITRATE);
-        mMediaRecorder.setVideoFrameRate(AppConfig.VIDEO_FPS);
+        mMediaRecorder.setVideoFrameRate(AppConfig.getVideoFps(mContext));
         mMediaRecorder.setVideoSize(mVideoSize.getWidth(), mVideoSize.getHeight());
 
         mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
@@ -338,7 +348,6 @@ public class CameraHelper {
     private void processFrameMetadata(TotalCaptureResult result) {
         if (!isRecordingVideo || mMetadataFile == null) return;
 
-        // 【SLAM关键】获取硬件生成时间戳，与 IMU 时间戳对其
         Long sensorTimestamp = result.get(CaptureResult.SENSOR_TIMESTAMP);
         long ts = (sensorTimestamp != null) ? sensorTimestamp : System.nanoTime();
 
@@ -346,7 +355,10 @@ public class CameraHelper {
         int iso = result.get(CaptureResult.SENSOR_SENSITIVITY) != null ? result.get(CaptureResult.SENSOR_SENSITIVITY) : 0;
         float focal = result.get(CaptureResult.LENS_FOCAL_LENGTH) != null ? result.get(CaptureResult.LENS_FOCAL_LENGTH) : 0;
 
-        String line = String.format(Locale.getDefault(), "%d,%d,%d,%d,%.2f\n", mFrameCount++, ts, exposure, iso, focal);
+        // 记录实际的帧时长，如果这个值接近 33000000 (33ms)，说明系统强制在了30fps
+        long frameDur = result.get(CaptureResult.SENSOR_FRAME_DURATION) != null ? result.get(CaptureResult.SENSOR_FRAME_DURATION) : 0;
+
+        String line = String.format(Locale.getDefault(), "%d,%d,%d,%d,%.2f,%d\n", mFrameCount++, ts, exposure, iso, focal, frameDur);
         FileUtils.appendTextToFile(mMetadataFile, line);
     }
 
@@ -356,6 +368,8 @@ public class CameraHelper {
             mCaptureSession = null;
         }
     }
+
+    // ... closeCamera, threads, chooseOptimalSize methods remain unchanged ...
 
     public void closeCamera() {
         try {

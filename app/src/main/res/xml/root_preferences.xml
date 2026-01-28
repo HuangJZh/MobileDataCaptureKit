@@ -1,0 +1,81 @@
+<androidx.preference.PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <androidx.preference.PreferenceCategory app:title="Camera Settings">
+
+        <!-- 修改点 1：增加 60FPS 警告 -->
+        <ListPreference
+            app:defaultValue="30"
+            app:entries="@array/fps_labels"
+            app:entryValues="@array/fps_values"
+            app:key="video_fps"
+            app:title="Target FPS"
+            app:summary="Warning: 60FPS requires Exposure Time &lt; 8ms. If the image is too dark or exposure is too long, the system may not achieve the actual frame rate."
+            app:useSimpleSummaryProvider="false" />
+
+        <SwitchPreferenceCompat
+            app:defaultValue="false"
+            app:key="focus_auto"
+            app:title="Auto Focus"
+            app:summaryOff="Manual Focus (0.0f/Infinity) - Best for SLAM"
+            app:summaryOn="Continuous Auto Focus" />
+
+        <SwitchPreferenceCompat
+            app:defaultValue="false"
+            app:key="exposure_auto"
+            app:title="Auto Exposure"
+            app:summaryOff="Manual Exposure - Best for SLAM"
+            app:summaryOn="Auto Exposure" />
+
+        <EditTextPreference
+            app:defaultValue="15000000"
+            app:key="exposure_time"
+            app:title="Exposure Time (ns)"
+            app:summary="Nanoseconds. 10ms=10000000. SLAM rec: &lt;15ms"
+            app:dialogTitle="Enter Exposure Time in Nanoseconds" />
+
+        <EditTextPreference
+            app:defaultValue="800"
+            app:key="manual_iso"
+            app:title="ISO Sensitivity"
+            app:summary="Range: 100-3200 approx"
+            app:dialogTitle="Enter ISO Value" />
+
+    </androidx.preference.PreferenceCategory>
+
+    <androidx.preference.PreferenceCategory app:title="Sensor Frequencies">
+        <!-- 0=FASTEST, 1=GAME, 2=UI, 3=NORMAL -->
+
+        <ListPreference
+            app:defaultValue="0"
+            app:entries="@array/sensor_freq_labels"
+            app:entryValues="@array/sensor_freq_values"
+            app:key="freq_acc"
+            app:title="Accelerometer"
+            app:useSimpleSummaryProvider="true" />
+
+        <!-- 修改点 2 & 3：移除原来的 ListPreference，改为只读提示 -->
+        <Preference
+            app:key="info_gyro"
+            app:title="Gyroscope (Fixed)"
+            app:summary="Locked to FASTEST (~200Hz+). Camera hardware requires high-freq gyro for stabilization, overriding app settings."
+            app:selectable="false" />
+
+        <ListPreference
+            app:defaultValue="1"
+            app:entries="@array/sensor_freq_labels"
+            app:entryValues="@array/sensor_freq_values"
+            app:key="freq_mag"
+            app:title="Magnetometer"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
+            app:defaultValue="3"
+            app:entries="@array/sensor_freq_labels"
+            app:entryValues="@array/sensor_freq_values"
+            app:key="freq_press"
+            app:title="Barometer"
+            app:useSimpleSummaryProvider="true" />
+
+    </androidx.preference.PreferenceCategory>
+
+</androidx.preference.PreferenceScreen>

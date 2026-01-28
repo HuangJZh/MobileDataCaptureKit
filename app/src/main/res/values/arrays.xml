@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="fps_labels">
+        <item>15 FPS</item>
+        <item>30 FPS</item>
+        <item>60 FPS (May not be achievable)</item>
+    </string-array>
+    <string-array name="fps_values">
+        <item>15</item>
+        <item>30</item>
+        <item>60</item>
+    </string-array>
+
+    <string-array name="sensor_freq_labels">
+        <item>Fastest (Max Hz)</item>
+        <item>Game (~50Hz)</item>
+        <item>UI (~16Hz)</item>
+        <item>Normal (~5Hz)</item>
+    </string-array>
+    <!-- 对应 SensorManager 的常量值: FASTEST=0, GAME=1, UI=2, NORMAL=3 -->
+    <string-array name="sensor_freq_values">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+    </string-array>
+</resources>
