@@ -126,7 +126,7 @@ Original CSV data is securely stored in the app's private directory
 
 Frame-level data recording: When recording videos, a synchronized Metadata CSV file is automatically generated to record the exact timestamp, exposure time, ISO, and focal length of each frame. It is stored in the app's private directory (Android/data/com.example.mobiledatacapturekit/files/MetaData...).
 
-Note：You can use **DataSeparation.py** to quickly separate the sensor data into four files: ACC.csv, GYRO.csv, MAG.csv, PRESS.csv. The files are as follows
+*Note：You can use **DataSeparation.py** to quickly separate the sensor data into four files: ACC.csv, GYRO.csv, MAG.csv, PRESS.csv. The files are as follows*
 
 ACC.csv
 
