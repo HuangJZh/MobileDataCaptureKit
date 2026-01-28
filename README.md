@@ -86,9 +86,11 @@ The application interface is designed for simplicity and real-time monitoring:
 ```text
 /app
 ├── java/com/example/mobiledatacapturekit
+|	├── Appconfig			   # Parameter Settings
 │   ├── MainActivity.java      # UI Controller & Permission handling
 │   ├── CameraHelper.java      # Camera2 API & MediaRecorder logic
 │   ├── SensorHelper.java      # SensorManager & IMU data processing
+|	├── SettingsActivity.java  # Read Settings
 │   └── FileUtils.java         # File I/O & MediaStore integration
 │
 ├── AndroidManifest.xml        # Permissions & Hardware feature declarations
