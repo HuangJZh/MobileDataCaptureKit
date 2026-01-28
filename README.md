@@ -29,7 +29,7 @@ The application interface is designed for simplicity and real-time monitoring:
 ### Camera Settings
 
 - **Target FPS:** Select between 15, 30, or 60 FPS.
-  - *⚠️ Note on 60 FPS:* To achieve a stable 60 FPS, the **Exposure Time must be set lower than 8ms (< 8,000,000 ns)** in Manual Exposure mode. If the exposure is too long (e.g., default 15ms), the hardware readout latency will force the system to fallback to 30 FPS.
+  - *⚠️ Note on 60 FPS:* To achieve a stable 60 FPS, the **Exposure Time must be set lower than 8ms (< 8,000,000 ns)** in Manual Exposure mode. If the exposure is too long (e.g., default 15ms), the hardware readout latency will force the camera cannot reach 60 frames per second.
 - **Focus Mode:** Toggle between **Continuous Auto Focus** and **Manual Focus** (Locked at 0.0f/Infinity). Manual focus is recommended for SLAM to prevent focal length changes (breathing effect).
 - **Exposure Mode:** Toggle between **Auto** and **Manual**.
 - **Manual Parameters:**
