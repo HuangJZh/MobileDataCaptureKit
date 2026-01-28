@@ -1,3 +1,5 @@
+
+
 # MobileDataCaptureKit
 
 **MobileDataCaptureKit** is a lightweight, modular Android application designed for researchers to capture **synchronized camera and sensor data** using a smartphone.
@@ -80,23 +82,91 @@ The application generates the following files during recording:
 ### 1. Video Metadata (`META_yyyymmdd_HHmmss.csv`)
 Logs camera properties for each frame synchronized with the video.
 ```csv
-Frame, Timestamp(ms), Exposure(ns), ISO, FocalLen
-0,     1706334500123, 20000000,     100, 4.5
-1,     1706334500156, 20000000,     100, 4.5
+Frame,Timestamp,Exposure,ISO,FocalLen
+0,1769523611631,18613238,711,6.81
+1,1769523611702,18613238,711,6.81
+2,1769523611740,18613238,711,6.81
+3,1769523611772,18427724,711,6.81
+4,1769523611801,18233376,711,6.81
+5,1769523611835,17897684,711,6.81
 ...
 ```
 
 ### 2. Sensor Data (`SENS_yyyymmdd_HHmmss.csv`)
 Logs high-frequency IMU data.
 ```csv
-Timestamp, SensorType, X,      Y,      Z,      Value
-12:35:01,  ACC,        0.123,  9.81,   0.05,
-12:35:01,  GYRO,       0.01,   -0.02,  0.00,
-12:35:01,  PRESS,      ,       ,       ,       1013.25
+Timestamp,SensorType,X,Y,Z,Value
+22:20:10.385,GYRO,-0.5715,0.3893,0.1707,
+22:20:10.386,ACC,0.4098,9.4433,3.2877,
+22:20:10.387,GYRO,-0.5751,0.3746,0.1671,
+22:20:10.388,ACC,0.4289,9.4433,3.3308,
+22:20:10.389,GYRO,-0.5715,0.3600,0.1622,
+22:20:10.390,ACC,0.4289,9.4337,3.3733,
+22:20:10.391,MAG,-12.2000,-43.4076,5.4534,
+22:20:10.392,GYRO,-0.5678,0.3392,0.1535,
+22:20:10.393,ACC,0.4624,9.4289,3.3972,
+22:20:10.394,GYRO,-0.5556,0.3244,0.1472,
+22:20:10.394,ACC,0.4433,9.3858,3.4588,
+22:20:10.396,GYRO,-0.5444,0.3073,0.1374,
+22:20:10.401,ACC,0.4624,9.3326,3.5061,
+22:20:10.407,PRESS,,,941.8298
 ...
 ```
+Videos/images are automatically saved to the system gallery, and can also be found at 
 
----
+(Android/data/com.example.mobiledatacapturekit/files/Videos...).
+
+Original CSV data is securely stored in the app's private directory 
+
+(Android/data/com.example.mobiledatacapturekit/files/SensorData...).
+
+Frame-level data recording: When recording videos, a synchronized Metadata CSV file is automatically generated to record the exact timestamp, exposure time, ISO, and focal length of each frame. It is stored in the app's private directory (Android/data/com.example.mobiledatacapturekit/files/MetaData...).
+
+Note：You can use **DataSeparation.py** to quickly separate the sensor data into four files: ACC.csv, GYRO.csv, MAG.csv, PRESS.csv. The files are as follows
+
+ACC.csv
+
+```csv
+Timestamp,X,Y,Z
+22:20:10.386,0.4098,9.4433,3.2877
+22:20:10.388,0.4289,9.4433,3.3308
+22:20:10.390,0.4289,9.4337,3.3733
+22:20:10.393,0.4624,9.4289,3.3972
+22:20:10.394,0.4433,9.3858,3.4588
+22:20:10.401,0.4624,9.3326,3.5061
+```
+GYRO.csv
+```csv
+Timestamp,X,Y,Z
+22:20:10.385,-0.5715,0.3893,0.1707
+22:20:10.387,-0.5751,0.3746,0.1671
+22:20:10.389,-0.5715,0.3600,0.1622
+22:20:10.392,-0.5678,0.3392,0.1535
+22:20:10.394,-0.5556,0.3244,0.1472
+22:20:10.396,-0.5444,0.3073,0.1374
+```
+MAG.csv
+```csv
+Timestamp,X,Y,Z
+22:20:10.391,-12.2000,-43.4076,5.4534
+22:20:10.416,-13.2980,-43.3100,5.4778
+22:20:10.426,-11.1508,-43.9200,7.8934
+22:20:10.435,-12.9686,-44.5178,4.2090
+22:20:10.441,-14.4936,-43.8590,4.7702
+22:20:10.448,-17.7754,-45.6890,1.5372
+```
+PRESS.csv
+```csv
+Timestamp,Value
+22:20:10.407,941.8298
+22:20:10.429,941.7969
+22:20:10.447,941.8349
+22:20:10.458,941.8148
+22:20:10.482,941.7961
+22:20:10.496,941.8292
+```
+
+
 
 ## 🛠 Requirements
 
