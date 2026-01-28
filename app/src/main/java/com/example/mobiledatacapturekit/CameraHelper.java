@@ -5,6 +5,7 @@ import android.content.Context;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.*;
+import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.ImageReader;
 import android.media.MediaRecorder;
 import android.os.Handler;
@@ -18,15 +19,13 @@ import android.widget.Toast;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-
-import android.hardware.camera2.params.StreamConfigurationMap;
-import java.util.Locale;
-import java.util.Arrays;
 
 public class CameraHelper {
     private static final String TAG = "CameraHelper";
@@ -61,10 +60,8 @@ public class CameraHelper {
     public void onResume() {
         startBackgroundThread();
         if (mTextureView.isAvailable()) {
-            // 先在主线程获取尺寸
             int width = mTextureView.getWidth();
             int height = mTextureView.getHeight();
-            // 【关键修改】将繁重的打开相机操作抛给后台线程，不阻塞 UI
             if (mBackgroundHandler != null) {
                 mBackgroundHandler.post(() -> openCamera(width, height));
             }
@@ -81,7 +78,6 @@ public class CameraHelper {
     private final TextureView.SurfaceTextureListener mSurfaceTextureListener = new TextureView.SurfaceTextureListener() {
         @Override
         public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
-            // 【关键修改】同样抛给后台线程
             if (mBackgroundHandler != null) {
                 mBackgroundHandler.post(() -> openCamera(width, height));
             }
@@ -98,7 +94,7 @@ public class CameraHelper {
             if (!mCameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
                 throw new RuntimeException("Time out waiting to lock camera opening.");
             }
-            // 简单逻辑：只选后置摄像头
+
             for (String cameraId : manager.getCameraIdList()) {
                 CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
                 Integer facing = characteristics.get(CameraCharacteristics.LENS_FACING);
@@ -108,18 +104,17 @@ public class CameraHelper {
                     break;
                 }
             }
+            if (mCameraId == null) mCameraId = manager.getCameraIdList()[0];
 
-            if (mCameraId == null) mCameraId = manager.getCameraIdList()[0]; // Fallback
-
-            // 设置尺寸
             StreamConfigurationMap map = mCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-            mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height);
-            mVideoSize = chooseOptimalSize(map.getOutputSizes(MediaRecorder.class), 1920, 1080); // 尝试 1080p
 
-            // 初始化 ImageReader (用于拍照)
+            // 使用 AppConfig 的分辨率设置
+            mVideoSize = chooseOptimalSize(map.getOutputSizes(MediaRecorder.class),
+                    AppConfig.VIDEO_WIDTH, AppConfig.VIDEO_HEIGHT);
+            mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height);
+
             mImageReader = ImageReader.newInstance(mPreviewSize.getWidth(), mPreviewSize.getHeight(), ImageFormat.JPEG, 2);
             mImageReader.setOnImageAvailableListener(reader -> {
-                // 保存图片
                 FileUtils.saveImageToGallery(mContext, reader.acquireNextImage());
             }, mBackgroundHandler);
 
@@ -137,14 +132,12 @@ public class CameraHelper {
             mCameraDevice = cameraDevice;
             startPreview();
         }
-
         @Override
         public void onDisconnected(CameraDevice cameraDevice) {
             mCameraOpenCloseLock.release();
             cameraDevice.close();
             mCameraDevice = null;
         }
-
         @Override
         public void onError(CameraDevice cameraDevice, int error) {
             mCameraOpenCloseLock.release();
@@ -153,9 +146,43 @@ public class CameraHelper {
         }
     };
 
+    /**
+     * 【关键】统一应用 SLAM/Config 参数
+     */
+    private void applyConfigSettings(CaptureRequest.Builder builder) {
+        // 1. 对焦 (Focus)
+        if (AppConfig.ENABLE_AUTO_FOCUS) {
+            builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+        } else {
+            builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
+            builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, AppConfig.FIXED_FOCUS_DISTANCE);
+        }
+
+        // 2. 曝光 (Exposure)
+        if (AppConfig.ENABLE_AUTO_EXPOSURE) {
+            builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON);
+        } else {
+            builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+            builder.set(CaptureRequest.SENSOR_SENSITIVITY, AppConfig.FIXED_ISO);
+            builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, AppConfig.FIXED_EXPOSURE_TIME_NS);
+            long frameDuration = 1_000_000_000L / AppConfig.VIDEO_FPS;
+            builder.set(CaptureRequest.SENSOR_FRAME_DURATION, frameDuration);
+        }
+
+        // 3. 【SLAM必须】关闭光学防抖 (OIS) - 防止内参(Intrinsics)变化
+        builder.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_OFF);
+
+        // 4. 【SLAM必须】关闭电子防抖 (EIS) - 防止图像裁剪和扭曲
+        builder.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE, CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_OFF);
+
+        // 5. 【SLAM建议】关闭/降低 ISP 后处理 (保留纹理细节)
+        builder.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_FAST);
+        builder.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_FAST);
+        builder.set(CaptureRequest.TONEMAP_MODE, CaptureRequest.TONEMAP_MODE_FAST);
+    }
+
     private void startPreview() {
         if (mCameraDevice == null || !mTextureView.isAvailable() || mPreviewSize == null) return;
-
         try {
             closeSession();
             SurfaceTexture texture = mTextureView.getSurfaceTexture();
@@ -164,16 +191,16 @@ public class CameraHelper {
 
             CaptureRequest.Builder builder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             builder.addTarget(surface);
+            builder.addTarget(mImageReader.getSurface());
 
-            // 【关键修复】：这里必须把 mImageReader.getSurface() 也加进去，否则拍照会崩
+            applyConfigSettings(builder); // 应用配置
+
             List<Surface> surfaces = Arrays.asList(surface, mImageReader.getSurface());
-
             mCameraDevice.createCaptureSession(surfaces, new CameraCaptureSession.StateCallback() {
                 @Override
                 public void onConfigured(CameraCaptureSession session) {
                     if (mCameraDevice == null) return;
                     mCaptureSession = session;
-                    builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
                     try {
                         mCaptureSession.setRepeatingRequest(builder.build(), null, mBackgroundHandler);
                     } catch (CameraAccessException e) {
@@ -192,8 +219,7 @@ public class CameraHelper {
         try {
             CaptureRequest.Builder captureBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             captureBuilder.addTarget(mImageReader.getSurface());
-            captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
-            // 简单处理方向，实际项目需要根据设备旋转计算
+            applyConfigSettings(captureBuilder); // 保持曝光一致
             captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, 90);
 
             mCaptureSession.stopRepeating();
@@ -202,7 +228,7 @@ public class CameraHelper {
                 public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
                     super.onCaptureCompleted(session, request, result);
                     Toast.makeText(mContext, "Saved to Gallery", Toast.LENGTH_SHORT).show();
-                    startPreview(); // 重新开始预览
+                    startPreview();
                 }
             }, mBackgroundHandler);
         } catch (CameraAccessException e) {
@@ -225,10 +251,12 @@ public class CameraHelper {
             builder.addTarget(previewSurface);
             builder.addTarget(recorderSurface);
 
-            // 准备元数据文件
+            applyConfigSettings(builder); // 应用配置
+
             File dir = FileUtils.getDataDir(mContext, "Metadata");
             mMetadataFile = new File(dir, "META_" + FileUtils.getTimestamp() + ".csv");
-            FileUtils.appendTextToFile(mMetadataFile, "Frame,Timestamp,Exposure,ISO,FocalLen\n");
+            // 修正 Header，明确时间戳单位
+            FileUtils.appendTextToFile(mMetadataFile, "Frame,Timestamp(ns),Exposure(ns),ISO,FocalLen\n");
             mFrameCount = 0;
 
             List<Surface> surfaces = new ArrayList<>();
@@ -239,17 +267,13 @@ public class CameraHelper {
                 @Override
                 public void onConfigured(CameraCaptureSession session) {
                     mCaptureSession = session;
-                    builder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
-
                     try {
-                        // 监听每一帧的元数据
                         mCaptureSession.setRepeatingRequest(builder.build(), new CameraCaptureSession.CaptureCallback() {
                             @Override
                             public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
                                 processFrameMetadata(result);
                             }
                         }, mBackgroundHandler);
-
                         mMediaRecorder.start();
                         isRecordingVideo = true;
                     } catch (CameraAccessException e) {
@@ -274,20 +298,17 @@ public class CameraHelper {
             e.printStackTrace();
         }
 
-        // 停止 Recorder 需要小心，防止过短录制崩溃
         try {
             mMediaRecorder.stop();
             mMediaRecorder.reset();
         } catch (RuntimeException e) {
-            // 录制时间太短会抛出异常
             Log.e(TAG, "Video stop failed: " + e.getMessage());
         }
 
         if (mCurrentVideoFile != null && mCurrentVideoFile.exists()) {
             FileUtils.saveVideoToGallery(mContext, mCurrentVideoFile);
-            Toast.makeText(mContext, "Video Saved: " + mCurrentVideoFile.getName(), Toast.LENGTH_LONG).show();
+            Toast.makeText(mContext, "Video Saved", Toast.LENGTH_LONG).show();
         }
-
         startPreview();
     }
 
@@ -299,14 +320,15 @@ public class CameraHelper {
         mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
         mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
 
-        // 暂存到私有目录，录制完成后再插入相册（避免 IO 冲突）
         File dir = FileUtils.getDataDir(mContext, "Videos");
         mCurrentVideoFile = new File(dir, "VID_" + FileUtils.getTimestamp() + ".mp4");
-
         mMediaRecorder.setOutputFile(mCurrentVideoFile.getAbsolutePath());
-        mMediaRecorder.setVideoEncodingBitRate(10000000);
-        mMediaRecorder.setVideoFrameRate(30);
+
+        // 使用 AppConfig 参数
+        mMediaRecorder.setVideoEncodingBitRate(AppConfig.VIDEO_BITRATE);
+        mMediaRecorder.setVideoFrameRate(AppConfig.VIDEO_FPS);
         mMediaRecorder.setVideoSize(mVideoSize.getWidth(), mVideoSize.getHeight());
+
         mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
         mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
         mMediaRecorder.setOrientationHint(90);
@@ -316,12 +338,15 @@ public class CameraHelper {
     private void processFrameMetadata(TotalCaptureResult result) {
         if (!isRecordingVideo || mMetadataFile == null) return;
 
-        long timestamp = System.currentTimeMillis();
+        // 【SLAM关键】获取硬件生成时间戳，与 IMU 时间戳对其
+        Long sensorTimestamp = result.get(CaptureResult.SENSOR_TIMESTAMP);
+        long ts = (sensorTimestamp != null) ? sensorTimestamp : System.nanoTime();
+
         long exposure = result.get(CaptureResult.SENSOR_EXPOSURE_TIME) != null ? result.get(CaptureResult.SENSOR_EXPOSURE_TIME) : 0;
         int iso = result.get(CaptureResult.SENSOR_SENSITIVITY) != null ? result.get(CaptureResult.SENSOR_SENSITIVITY) : 0;
         float focal = result.get(CaptureResult.LENS_FOCAL_LENGTH) != null ? result.get(CaptureResult.LENS_FOCAL_LENGTH) : 0;
 
-        String line = String.format(Locale.getDefault(), "%d,%d,%d,%d,%.2f\n", mFrameCount++, timestamp, exposure, iso, focal);
+        String line = String.format(Locale.getDefault(), "%d,%d,%d,%d,%.2f\n", mFrameCount++, ts, exposure, iso, focal);
         FileUtils.appendTextToFile(mMetadataFile, line);
     }
 
@@ -373,7 +398,6 @@ public class CameraHelper {
         }
     }
 
-    // 简单的选择合适尺寸的辅助方法
     private Size chooseOptimalSize(Size[] choices, int width, int height) {
         List<Size> bigEnough = new ArrayList<>();
         for (Size option : choices) {
@@ -390,7 +414,8 @@ public class CameraHelper {
                 }
             });
         } else {
-            return choices[0];
+            if (choices.length > 0) return choices[0];
+            return new Size(width, height);
         }
     }
 }

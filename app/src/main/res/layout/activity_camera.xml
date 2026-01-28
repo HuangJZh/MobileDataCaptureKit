@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     android:background="#000000">
 
-    <!-- 1. 相机预览 (最底层) -->
+    <!-- 1. 相机预览 -->
     <TextureView
         android:id="@+id/texture_view"
         android:layout_width="match_parent"
@@ -20,7 +20,7 @@
         android:background="@drawable/bg_gradient_scrim"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- 3. 传感器数据区 -->
+    <!-- 3. 传感器数据 -->
     <LinearLayout
         android:id="@+id/sensor_hud_container"
         android:layout_width="wrap_content"
@@ -91,8 +91,7 @@
             android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- 4. 底部控制栏 -->
-    <!-- 修改点：paddingBottom 改为 45dp，为下方文字腾出空间 -->
+    <!-- 4. 底部控制栏 (增加了 paddingBottom) -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/bottom_control_panel"
         android:layout_width="match_parent"
@@ -100,7 +99,6 @@
         android:paddingBottom="45dp"
         app:layout_constraintBottom_toBottomOf="parent">
 
-        <!-- 拍照按钮 -->
         <ImageButton
             android:id="@+id/camera_take_picture"
             android:layout_width="72dp"
@@ -115,7 +113,6 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <!-- Data 按钮 -->
         <Button
             android:id="@+id/videostartstop"
             android:layout_width="100dp"
@@ -131,7 +128,6 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="@+id/camera_take_picture" />
 
-        <!-- Video 按钮 -->
         <Button
             android:id="@+id/startStopButton"
             android:layout_width="100dp"
@@ -149,7 +145,7 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!-- 5. 新增：底部版权信息 -->
+    <!-- 5. 底部版权信息 -->
     <TextView
         android:layout_width="0dp"
         android:layout_height="wrap_content"
