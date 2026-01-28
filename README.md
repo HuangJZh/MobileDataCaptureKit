@@ -8,7 +8,7 @@ This tool integrates the **Android Camera2 API** with multiple onboard IMU senso
 
 ---
 
-## 📱 User Interface
+## User Interface
 
 <img src="assets/app_interface.png" alt="app_interface" style="zoom: 25%;" />
 
@@ -22,10 +22,29 @@ The application interface is designed for simplicity and real-time monitoring:
     *   Captures a high-resolution still image and saves it to the system Gallery.
 4.  **START VIDEO (Red Button):**
     *   Begins video recording. This  triggers the logging of frame-level metadata.
+## Settings Interface
+
+<img src="assets/settings_interface.png" alt="settings_interface" style="zoom:25%;" />
+
+### Camera Settings
+
+- **Target FPS:** Select between 15, 30, or 60 FPS.
+  - *⚠️ Note on 60 FPS:* To achieve a stable 60 FPS, the **Exposure Time must be set lower than 8ms (< 8,000,000 ns)** in Manual Exposure mode. If the exposure is too long (e.g., default 15ms), the hardware readout latency will force the system to fallback to 30 FPS.
+- **Focus Mode:** Toggle between **Continuous Auto Focus** and **Manual Focus** (Locked at 0.0f/Infinity). Manual focus is recommended for SLAM to prevent focal length changes (breathing effect).
+- **Exposure Mode:** Toggle between **Auto** and **Manual**.
+- **Manual Parameters:**
+  - **Exposure Time (ns):** Set absolute exposure duration in nanoseconds (e.g., 10000000 for 10ms). Short exposure reduces motion blur.
+  - **ISO Sensitivity:** Manually set ISO (e.g., 800) to balance brightness when using short exposure times.
+
+### Sensor Frequencies
+
+- **Adjustable Sensors:** Set sampling rates (Fastest, Game, UI, Normal) for Accelerometer, Magnetometer, and Barometer.
+- **Gyroscope (Fixed):** The Gyroscope frequency is **locked to FASTEST (~200Hz+)**.
+  - *Reason:* When the Camera is active, the Android hardware abstraction layer (HAL) reserves high-frequency gyro data for OIS/EIS stabilization, overriding application-level frequency requests.
 
 ---
 
-## 👥 Authors
+## Authors
 
 **黄俊植（Junzhi Huang）** – Shanghai Jiao Tong University — （Email: biscu0@sjtu.edu.cn）
 
@@ -33,7 +52,7 @@ The application interface is designed for simplicity and real-time monitoring:
 
 ---
 
-## ✨ Features
+## Features
 
 - **Advanced Camera2 API Integration**
     - Records video (H.264/MP4) with configurable parameters.
@@ -62,7 +81,7 @@ The application interface is designed for simplicity and real-time monitoring:
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```text
 /app
@@ -79,7 +98,7 @@ The application interface is designed for simplicity and real-time monitoring:
 
 ---
 
-## 📊 Data Output Format
+## Data Output Format
 
 The application generates the following files during recording:
 
@@ -172,7 +191,7 @@ Timestamp,Value
 
 
 
-## 🛠 Requirements
+## Requirements
 
 - **Android Studio** (Flamingo or later recommended)
 - **Android SDK Platform 33** (Compile SDK)
@@ -181,7 +200,7 @@ Timestamp,Value
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Clone the repository
 ```bash
@@ -195,7 +214,7 @@ git clone https://github.com/HuangJZh/MobileDataCaptureKit.git
 ### 3. Build & Run
 1. Connect an Android device via USB.
 2. Ensure "Developer Options" and "USB Debugging" are enabled on the phone.
-3. Click **Run ▶** in Android Studio.
+3. Click **Run * in Android Studio.
 
 ### 4. Permissions
 Upon the first launch, grant the following permissions:
@@ -205,6 +224,6 @@ Upon the first launch, grant the following permissions:
 
 ---
 
-## 📝 License
+## License
 
 This project is open-source and available for research and educational purposes.
