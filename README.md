@@ -21,7 +21,7 @@ The application interface is designed for simplicity and real-time monitoring:
 3.  **Shutter Button (Center Camera Icon):**
     *   Captures a high-resolution still image and saves it to the system Gallery.
 4.  **START VIDEO (Red Button):**
-    *   Begins video recording. This **simultaneously** triggers the logging of frame-level metadata and high-frequency sensor data, ensuring strict synchronization.
+    *   Begins video recording. This  triggers the logging of frame-level metadata.
 
 ---
 
