@@ -50,9 +50,13 @@ The application interface is designed for simplicity and real-time monitoring:
 
 - **Modern Android Storage Support**
     - Fully compatible with **Android 10+ Scoped Storage**.
+    
     - Videos and Images are automatically saved to the system **Gallery**.
-    - Raw sensor data files are accessible via the app's private external storage (`/Android/data/...`).
 
+    - Raw sensor data files are accessible via the app's private external storage 
+    
+      (`/Android/data/...`).
+    
 - **Modular Architecture**
     - Refactored codebase separating Camera, Sensor, and File logic for easy extension and maintenance.
 
